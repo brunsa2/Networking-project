@@ -1,2 +1,3 @@
-Project.xcodeproj
+Project.xcodeproj/*
 .DS_Store
+build/*

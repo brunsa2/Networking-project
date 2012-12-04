@@ -1,16 +1,21 @@
 CORE_AVRDUDE = avrdude $(CORE_PROGRAMMER) -P $(CORE_PROGRAMMER_PORT) -p $(CORE_PROGRAMMED_DEVICE)
-CORE_COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CORE_CLOCK) -mmcu=$(CORE_DEVICE)
+CORE_COMPILE = avr-gcc -g -Wall -Os -DF_CPU=$(CORE_CLOCK) -mmcu=$(CORE_DEVICE)
 NETWORK_AVRDUDE = avrdude $(NETWORK_PROGRAMMER) -P $(NETWORK_PROGRAMMER_PORT) -p $(NETWORK_PROGRAMMED_DEVICE)
-NETWORK_COMPILE = avr-gcc -Wall -Os -DF_CPU=$(NETWORK_CLOCK) -mmcu=$(NETWORK_DEVICE)
+NETWORK_COMPILE = avr-gcc -g -Wall -Os -DF_CPU=$(NETWORK_CLOCK) -mmcu=$(NETWORK_DEVICE)
 
 all: build/core.hex build/network.hex
 
 clean:
 	rm -rf build/* $(CORE_OBJECTS) $(NETWORK_OBJECTS)
 
-disasm: build/core.elf build/network.elf
-	avr-objdump -d build/core.elf > build/core.lss
-	avr-objdump -d build/network.elf > build/network.lss
+#disasm: build/core.elf build/network.elf
+#	avr-objdump -d -S build/core.elf > build/core.lss
+#	avr-objdump -d -S build/network.elf > build/network.lss
+    
+disasm: build/core.lss build/network.lss
+
+%.lss: %.elf
+	avr-objdump -d -S $< > $@
 
 core/%.o: core/%.c
 	$(CORE_COMPILE) -c $< -o $@
