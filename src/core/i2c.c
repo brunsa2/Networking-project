@@ -125,6 +125,9 @@ int16_t i2c_transmit(uint8_t address, char *data, uint8_t size) {
         TWCR = (1 << TWINT);
         return I2C_BUS_BUSY;
     }
+    if (size == 0) {
+        return 0;
+    }
     while (size-- > 0) {
         return_code = i2c_send_data(*data++);
         size_transmitted++;
@@ -158,6 +161,7 @@ int16_t i2c_receive(uint8_t address, void *data, uint8_t size) {
         TWCR = (1 << TWINT);
         return I2C_BUS_BUSY;
     }
+    // TODO: Make sure it can handle reading 0 or 1 bytes
     while (size-- > 1) {
         return_code = i2c_receive_data(data);
         data++;

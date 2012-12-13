@@ -33,43 +33,12 @@ int main() {
     i2c_init();
     usart_init(0, 0, USART_TRANSMIT);
     
-    /*volatile uint16_t x;
+    volatile uint16_t x, y;
+    for (x = 0; x < 30000; x++) for (y = 0; y < 10; y++);
     
-    i2c_start();
-    i2c_send_address(0xa0);
-    i2c_send_data(0x00);
-    i2c_send_data(0x00);
-    i2c_stop();
-
-    for (x = 0; x<100; x++);
-    
-    i2c_start();
-    i2c_send_address(0xa1);
-    uint8_t y = i2c_receive_data_and_nack();
-    i2c_stop();
-    
-    usart_put_hex(y);
-    usart_puts("\r\n");*/
-    
-    char buffer[9];
-    
-    int16_t status1 = i2c_transmit(0x50, "\x00\x00", 2), status2 = -1;
-    if (status1 == 2) {
-        status2 = i2c_receive(0x50, &(buffer[0]), 9);
-    }
+    int16_t status1 = i2c_transmit(0x35, "\xaa", 1);
     i2c_stop();
     usart_put_hex_word(status1);
     usart_puts("\r\n");
-    usart_put_hex_word(status2);
-    usart_puts("\r\n");
-    
-    if (status2 >= 0) {
-        uint8_t x;
-        for (x = 0; x < 9; x++) {
-            usart_put_hex(buffer[x]);
-            usart_puts("\r\n");
-        }
-    }
-    
     return 0;
 }
