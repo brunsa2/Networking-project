@@ -2,90 +2,107 @@
 #include <avr/io.h>
 #include <stdint.h>
 
-static volatile uint8_t raw_buffer;
-static volatile uint8_t filtered_buffer;
+#include "usart.h"
 
-/*static uint8_t filter[32] = {
-    0, 0, 0, 0, 0, 0, 0, 1,
-    0, 0, 0, 1, 0, 1, 1, 1,
-    0, 0, 0, 1, 0, 1, 1, 1,
-    0, 1, 1, 1, 1, 1, 1, 1
-};*/
+#define BUFFER_SIZE 128
 
-//static uint8_t filter[2] = {0, 1};
+static uint8_t get_next_bit(void);
+static uint8_t buffer_is_empty(void);
+static uint8_t buffer_is_full(void);
+static void buffer_enqueue(uint8_t data);
+static uint8_t buffer_dequeue(void);
 
-typedef enum { IDLE, BUSY, COLLISION } bus_state;
-static volatile bus_state state = IDLE;
+static volatile uint8_t current_byte = 0xff, current_bit = 1;
+static volatile uint8_t bit_number = 0, is_transmitting = 0;
+
+static volatile uint8_t bit_patterns[2][2] = { { 0, 1 }, { 1, 0 } };
+
+static volatile uint8_t data_buffer[BUFFER_SIZE];
+static volatile uint8_t buffer_head = 0, buffer_tail = 0;
 
 int main() {
-    DDRA = 0xfe;
+    DDRA = 0xff;
+    PORTA = 0x01;
     
-    // 9615.4 Hz to sample each bit four times (two high, two low)
+    // 9615.4 Hz to drive each bit four times (two high, two low)
     OCR0 = 207;
     // CTC mode with CLK/8
     TCCR0 = (1 << WGM01) | (1 << CS01);
-    // Enable interrupts
+    // Enable interrupts for timer
     TIMSK = (1 << OCIE0);
     
+    usart_init(8000000, 9600, USART_TRANSMIT | USART_RECEIVE);
+    
     asm volatile("sei");
+    
     while (1) {
-        switch (state) {
-            case IDLE:
-                PORTA |= (1 << PA4);
-                PORTA &= ~(1 << PA5);
-                break;
-            case BUSY:
-                PORTA &= ~((1 << PA4) | (1 << PA5));
-                break;
-            case COLLISION:
-                PORTA |= (1 << PA5);
-                PORTA &= ~(1 << PA4);
-                break;
+        if (usart_hasc()) {
+            char usart_char = usart_getc();
+            usart_putc(usart_char);
+            if (usart_char != '\r' && usart_char != '\n') {
+                buffer_enqueue(0b10000000 | usart_char);
+            }
+            if (usart_char == '\n') {
+                current_byte = buffer_dequeue();
+                bit_number = 15;
+                is_transmitting = 1;
+            }
         }
     }
 }
 
+static uint8_t get_next_bit(void) {
+    if (bit_number > 15) {
+        return 1;
+    }
+    if (!is_transmitting) {
+        return 1;
+    }
+    uint8_t masked_bit = current_byte & (1 << (bit_number / 2));
+    uint8_t bit_to_transmit = masked_bit > 0;
+    return bit_patterns[bit_to_transmit][bit_number % 2];
+}
+
+static uint8_t buffer_is_empty(void) {
+    uint8_t test;
+    asm volatile("cli");
+    test = buffer_head == buffer_tail;
+    asm volatile("sei");
+    return test;
+}
+
+static uint8_t buffer_is_full(void) {
+    uint8_t test;
+    asm volatile("cli");
+    test = (buffer_tail + 1) % BUFFER_SIZE == buffer_head;
+    asm volatile("sei");
+    return test;
+}
+
+static void buffer_enqueue(uint8_t data) {
+    while (buffer_is_full());
+    data_buffer[buffer_tail] = data;
+    buffer_tail++;
+}
+
+static uint8_t buffer_dequeue(void) {
+    while (buffer_is_empty());
+    uint8_t data = data_buffer[buffer_head];
+    buffer_head++;
+    return data;
+}
+
 ISR(TIMER0_COMP_vect) {
-    PORTA |= (1 << PA3);
-    
-    uint8_t in = PINA & 0x01;
-    raw_buffer = (in << 7) | (raw_buffer >> 1);
-    
-    if (raw_buffer & 0x80) {
-        PORTA |= (1 << PA2);
-    } else {
-        PORTA &= ~(1 << PA2);
+    PORTA = (PORTA & 0xf8) | 0b010 | current_bit;
+    current_bit = get_next_bit();
+    if (bit_number == 0) {
+        PORTA |= 0b100;
+        if (is_transmitting && !buffer_is_empty()) {
+            current_byte = buffer_dequeue();
+        } else {
+            is_transmitting = 0;
+        }
     }
-    
-    if (raw_buffer & 0x40) {
-        PORTA |= (1 << PA1);
-    } else {
-        PORTA &= ~(1 << PA1);
-    }
-    
-    uint8_t buffer_top = (raw_buffer & 0b11000000) >> 6;
-    
-    switch (state) {
-        case IDLE:
-            if (0b0 == (raw_buffer >> 7)) {
-                state = BUSY;
-            } else if (0b0000 == (raw_buffer >> 4)) {
-                state = COLLISION;
-            }
-            break;
-        case BUSY:
-            if (0b1111 == (raw_buffer >> 4)) {
-                state = IDLE;
-            } else if (0b0000 == (raw_buffer >> 4)) {
-                state = COLLISION;
-            }
-            break;
-        case COLLISION:
-            if (0b1 == (raw_buffer >> 7)) {
-                state = IDLE;
-            }
-            break;
-    }
-    
-    PORTA &= ~(1 << PA3);
+    bit_number = bit_number == 0 ? 15 : bit_number - 1;
+    PORTA &= ~(0b110);
 }
