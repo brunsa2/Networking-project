@@ -33,10 +33,12 @@ int main() {
     i2c_init();
     usart_init(0, 0, USART_TRANSMIT);
     
+    uint8_t buffer[8];
+    
     volatile uint16_t x, y;
     for (x = 0; x < 30000; x++) for (y = 0; y < 10; y++);
     
-    int16_t status1 = i2c_transmit(0x35, "\xaa", 1);
+    int16_t status1 = i2c_receive(0x35, &(buffer[0]), 2);
     i2c_stop();
     usart_put_hex_word(status1);
     usart_puts("\r\n");
