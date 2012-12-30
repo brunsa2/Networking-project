@@ -1,92 +1,55 @@
+#include <avr/io.h>
 #include <avr/interrupt.h>
 
 #include "i2c_slave.h"
 
-static uint8_t address;
+static i2c_slave_handle *slave_handle;
 
-typedef enum {
-    CHECK_ADDRESS, ACK_SENT
-} i2c_state;
+/*void i2c_slave_init(i2c_slave_handle *handle) {
+    slave_handle = handle;
+    // 100 kHz
+    TWBR = 32;
+    // Enable device and clear flags
+    TWCR = (1 << TWEA) | (1 << TWEN) | (1 << TWIE);
+    // Prescale 1
+    TWSR = 0;
+    // Assign address
+    TWAR = handle->address << 1;
+}*/
 
-i2c_state state;
-
-/**
- * Initialize I2C for 100 kHz operation
- */
-void i2c_slave_init(uint8_t device_address) {
-    address = device_address;
-    
-    // Clear any pull-up resistors
-    DDR_USI &= ~(1 << P_SDA);
-    PORT_USI &= ~(1 << P_SDA);
-    DDR_USI &= ~(1 << P_SCL);
-    PORT_USI &= ~(1 << P_SCL);
-    
-    /*DDR_USI |= (1 << P_SDA);
-    PORT_USI |= (1 << P_SDA);
-    DDR_USI &= ~(1 << P_SDA);
-    DDR_USI |= (1 << P_SCL);
-    PORT_USI |= (1 << P_SCL);*/
-    
-    // Start condition interrupt on, no overflow interrupt, TWI mode, no USI counter overflow hold,
-    // Shift reg clock source = external, + edge, 4 bit source = external, both ends, no toggle clock-port pin
-    USICR = (1 << USISIE) | (1 << USIWM1) | (1 << USICS1);
-    // Clear interrupts, reset overflow
-    USISR = (1 << USISIF) | (1 << USIOIF) | (1 << USIDC);
-}
-
-ISR(USI_START_vect) {
-    //PORTA &= ~(1 << PA1);
-    // SDA input
-    DDR_USI &= ~(1 << P_SDA);
-    //PORTA &= ~(1 << PA2);
-    // Wait for start to finish
-    //while ((PIN_USI & (1 << P_SCL)) && !(PIN_USI & (1 << P_SDA)));
-    //PORTA &= ~(1 << PA3);
-    
-    // Stop condition detect
-    if (PIN_USI & (1 << P_SDA)) {
-        i2c_slave_init(address);
-        return;
-    }
-    
-    state = CHECK_ADDRESS;
-    
-    // Start condition interrupt on, overflow interrupt, TWI mode, USI counter overflow hold,
-    // Shift reg clock source = external, + edge, 4 bit source = external, both ends, no toggle clock-port pin
-    USICR = (1 << USISIE) | (1 << USIOIE) | (1 << USIWM1) | (1 << USIWM0) | (1 << USICS1);
-    // Clear interrupts, reset overflow
-    USISR = (1 << USISIF) | (1 << USIOIF) | (1 << USIDC);
-}
-
-ISR(USI_OVF_vect) {
-    uint8_t data = USIDR;
-    uint8_t overflow_counter = 0x00;
-    uint8_t detected_address;
-    
-    switch (state) {
-        case CHECK_ADDRESS:
-            detected_address = (data & 0xfe) >> 1;
-            
-            if (address == detected_address) {
-                PORTA &= ~(1 << PA1);
-                USIDR = 0;
-                overflow_counter = 0x0e;
-                DDR_USI |= (1 << P_SDA);
-                state = ACK_SENT;
+/*ISR(TWI_vect) {
+    uint8_t should_ack;
+    switch (TWSR & 0xf8) {
+        case I2C_SR_MASTER_WRITE_ACK:
+            should_ack = slave_handle->slave_receive_address();
+            if (I2C_SLAVE_ACK == should_ack) {
+                TWCR = (1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE);
             } else {
-                PORTA &= ~(1 << PA2);
-                USIDR = 0;
-                overflow_counter = 0x00;
-                i2c_slave_init(address);
+                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
             }
-            
             break;
-        case ACK_SENT:
-            overflow_counter = 0x00;
-            DDR_USI &= ~(1 << P_SDA);
+        case I2C_SR_DATA_RECEIVED_ACK_SENT:
+            should_ack = slave_handle->slave_receive_byte(TWDR);
+            if (I2C_SLAVE_ACK == should_ack) {
+                TWCR = (1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE);
+            } else {
+                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
+            }
+            break;
+        case I2C_SR_DATA_RECEIVED_NACK_SENT:
+            slave_handle->slave_receive_byte(TWDR);
+            TWCR = (1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE);
+            break;
+        case I2C_ST_MASTER_READ_ACK:
+            TWDR = slave_handle->slave_transmit_byte();
+            TWCR = (1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE);
+            break;
+        case I2C_ST_DATA_SENT_ACK_RECEIVED:
+            TWDR = slave_handle->slave_transmit_byte();
+            TWCR = (1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE);
+            break;
+        case I2C_ST_DATA_SENT_NACK_RECEIVED:
+            TWCR = (1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE);
             break;
     }
-    
-    USISR = (1 << USIOIF) | (1 << USIDC) | (overflow_counter << USICNT0);
-}
+}*/

@@ -2,55 +2,54 @@
 #include <avr/io.h>
 #include <stdint.h>
 
-#include "i2c_slave.h"
+//#define I2C_INCLUDE_SLAVE
 
-static uint8_t count = 5;
+#include "../common/i2c.h"
 
-uint8_t receive_address(void) {
+static uint8_t count = 4;
+static uint8_t count2 = 4;
+static uint8_t data = 0;
+
+uint8_t should_send_ack(void) {
     count--;
     if (count > 0) {
-        return I2C_SLAVE_ACK;
+        return I2C_SLAVE_SEND_ACK;
     } else {
-        return I2C_SLAVE_NACK;
+        return I2C_SLAVE_SEND_NACK;
     }
 }
 
-uint8_t receive_byte(uint8_t data) {
-    if (data == 0xaa) {
-        PORTA |= 0x80;
-    } else if (data == 0xbb) {
-        PORTA |= 0x40;
-    } else if (data == 0xcc) {
-        PORTA |= 0x20;
-    } else if (data == 0xdd) {
-        PORTA |= 0x10;
-    }
-    
-    count--;
-    if (count > 0) {
-        return I2C_SLAVE_ACK;
+uint8_t should_send_data(void) {
+    count2--;
+    if (count2 > 0) {
+        return I2C_SLAVE_SEND_DATA;
     } else {
-        return I2C_SLAVE_NACK;
+        return I2C_SLAVE_SEND_NO_DATA;
     }
 }
 
 uint8_t transmit_byte(void) {
-    return count++;
+    return data++;
 }
 
 int main() {
-    DDRA = 0xff;
-    PORTA = 0x00;
-    
-    i2c_slave_handle i2c;
+    i2c_slave i2c;
     i2c.address = 0x35;
-    i2c.slave_receive_address = receive_address;
-    i2c.slave_receive_byte = receive_byte;
-    i2c.slave_transmit_byte = transmit_byte;
+    i2c.accept_global_call = 1;
+    i2c.use_interrupts = 0;
     
-    asm("sei");
+    i2c.slave_general_call = 0;
+    i2c.slave_stop = 0;
+    i2c.slave_should_send_ack = should_send_ack;
+    i2c.slave_receive_byte = 0;
+    
+    i2c.slave_transmit_byte = transmit_byte;
+    i2c.slave_should_send_data = should_send_data;
     
     i2c_slave_init(&i2c);
     
-    while (1);
+    while (1) {
+        while (!i2c_has_event());
+        i2c_handle_event();
+    }
 }
