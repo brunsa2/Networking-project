@@ -2,54 +2,30 @@
 #include <avr/io.h>
 #include <stdint.h>
 
-//#define I2C_INCLUDE_SLAVE
-
 #include "../common/i2c.h"
 
-static uint8_t count = 4;
-static uint8_t count2 = 4;
-static uint8_t data = 0;
+uint8_t r_buffer[8];
 
-uint8_t should_send_ack(void) {
-    count--;
-    if (count > 0) {
-        return I2C_SLAVE_SEND_ACK;
-    } else {
-        return I2C_SLAVE_SEND_NACK;
-    }
+static void receive(uint8_t is_general_call) {
+    //if (r_buffer[0] == 0x12 && r_buffer[1] == 0x34 && r_buffer[2] == 0x56 && r_buffer[3] == 0x78) PORTA |= 0x10;
 }
 
-uint8_t should_send_data(void) {
-    count2--;
-    if (count2 > 0) {
-        return I2C_SLAVE_SEND_DATA;
-    } else {
-        return I2C_SLAVE_SEND_NO_DATA;
-    }
-}
-
-uint8_t transmit_byte(void) {
-    return data++;
+static void transmit(void) {
+    i2c_transmit(0x35, (uint8_t *) " ", 1);
 }
 
 int main() {
-    i2c_slave i2c;
-    i2c.address = 0x35;
-    i2c.accept_global_call = 1;
-    i2c.use_interrupts = 0;
+    DDRA = 0xff;
+    PORTA = 0x00;
+    i2c_init();
+    i2c_init_slave(0x35, I2C_REJECT_GENERAL_CALL);
+    i2c_set_receive_buffer(&(r_buffer[0]), 2);
+    i2c_set_receive_callback(receive);
+    i2c_set_transmit_buffer("\x14\x25\x36\x47\x58\x69    ", 6);
+    i2c_set_transmit_callback(transmit);
     
-    i2c.slave_general_call = 0;
-    i2c.slave_stop = 0;
-    i2c.slave_should_send_ack = should_send_ack;
-    i2c.slave_receive_byte = 0;
+    asm volatile("sei");
     
-    i2c.slave_transmit_byte = transmit_byte;
-    i2c.slave_should_send_data = should_send_data;
-    
-    i2c_slave_init(&i2c);
-    
-    while (1) {
-        while (!i2c_has_event());
-        i2c_handle_event();
-    }
+    while (1);
+    return 0;
 }

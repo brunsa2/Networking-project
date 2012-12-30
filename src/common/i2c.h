@@ -3,20 +3,10 @@
 
 #include <stdint.h>
 
-#define I2C_MASTER_SEND_STOP 1
-#define I2C_MASTER_SEND_NO_STOP 0
-#define I2C_MASTER_SEND_ACK 1
-#define I2C_MASTER_SEND_NACK 0
-#define I2C_SLAVE_SEND_ACK 1
-#define I2C_SLAVE_SEND_NACK 0
-#define I2C_SLAVE_SEND_DATA 1
-#define I2C_SLAVE_SEND_NO_DATA 0
-#define I2C_HAS_EVENT 1
-#define I2C_HAS_NO_EVENT 0
-#define I2C_READ 1
-#define I2C_WRITE 0
-#define I2C_BUSY 1
-#define I2C_FREE 0
+#define I2C_ACCEPT_GENERAL_CALL 1
+#define I2C_REJECT_GENERAL_CALL 0
+#define I2C_ENABLE_SLAVE 1
+#define I2C_DISABLE_SLAVE 0
 
 #define I2C_START_SENT 0x08
 #define I2C_REPEAT_START_SENT 0x10
@@ -49,46 +39,17 @@
 #define I2C_ST_DATA_SENT_NACK_RECEIVED 0xc0
 #define I2C_ST_NO_DATA_SENT_ACK_RECEIVED 0xc8
 
-//#ifdef I2C_INCLUDE_MASTER
-typedef struct {
-    uint8_t use_interrupts;
-    
-    uint8_t (*master_get_address)(void);
-    void (*master_no_slave_present)(void);
-    uint8_t (*master_get_data)(void);
-    uint8_t (*master_should_stop)(void);
-    uint8_t (*master_read_or_write)(void);
-    uint8_t (*master_should_ack)(void);
-    void (*master_set_data)(uint8_t data);
-} i2c_master;
-//#endif
-
-//#ifdef I2C_INCLUDE_SLAVE
-typedef struct {
-    uint8_t address;
-    uint8_t accept_global_call;
-    uint8_t use_interrupts;
-    
-    uint8_t (*slave_should_send_ack)(void);
-    void (*slave_receive_byte)(uint8_t data);
-    void (*slave_general_call)(void);
-    void (*slave_stop)(void);
-    
-    uint8_t (*slave_transmit_byte)(void);
-    uint8_t (*slave_should_send_data)(void);
-} i2c_slave;
-//#endif
-
-//#ifdef I2C_INCLUDE_MASTER
-void i2c_master_init(i2c_master *master);
-//#endif
-//#ifdef I2C_INCLUDE_SLAVE
-void i2c_slave_init(i2c_slave *slave);
-//#endif
-uint8_t i2c_has_event(void);
-void i2c_handle_event(void);
-uint8_t i2c_is_busy(void);
-
-void i2c_start(void);
+void i2c_init(void);
+void i2c_init_slave(uint8_t address, uint8_t accept_general_call);
+void i2c_set_slave_status(uint8_t status);
+void i2c_set_receive_buffer(uint8_t *data, uint8_t size);
+void i2c_set_receive_callback(void (*callback)(uint8_t is_general_call));
+void i2c_set_transmit_buffer(uint8_t *data, uint8_t size);
+void i2c_set_transmit_callback(void (*callback)(void));
+void i2c_transmit(uint8_t address, uint8_t *data, uint8_t size);
+void i2c_receive(uint8_t address, uint8_t *data, uint8_t size);
+void i2c_repeated_start_after_transmission(void);
+void i2c_stop_after_transmission(void);
+uint8_t i2c_is_working(void);
 
 #endif
