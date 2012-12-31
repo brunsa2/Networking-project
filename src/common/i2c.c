@@ -28,6 +28,8 @@ void i2c_init(void) {
 }
 
 // TODO: Need critical sections around global data
+// TODO: Implement master transmit/receive callbacks
+// TODO: Rename slave functions to include "slave" in name
 
 void i2c_init_slave(uint8_t address, uint8_t accept_general_call) {
     is_slave = 1;
