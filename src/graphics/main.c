@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include "gdm12864h.h"
 
 int main(void) {
     DDRA = 0xff;
