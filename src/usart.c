@@ -12,7 +12,7 @@
 volatile static uint8_t usart_is_initialized = 0;
 
 #define BAUD_HIGH 0
-#define BAUD_LOW 51
+#define BAUD_LOW 16
 
  /**
   * Initialize USART with specified baud rate and options
@@ -20,7 +20,7 @@ volatile static uint8_t usart_is_initialized = 0;
   * @param baud Baud rate
   * @param flags Flags for options for serial port
   */
-void usart_init(uint32_t clock, uint16_t baud, uint8_t flags) {
+void usart_init(uint32_t clock, uint32_t baud, uint8_t flags) {
 	UCSR0B = 0;
 	if (flags & USART_TRANSMIT) {
 		// Enable transmitting

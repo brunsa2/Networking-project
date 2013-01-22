@@ -31,7 +31,7 @@
  * @param flags Flags for options for serial port
  * @return Nothing
  */
-void usart_init(uint32_t clock, uint16_t baud, uint8_t flags);
+void usart_init(uint32_t clock, uint32_t baud, uint8_t flags);
 
 /**
  * Send one byte over USART
