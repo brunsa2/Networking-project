@@ -1,7 +1,7 @@
 SOURCE_DIRECTORY = src/
 BUILD_DIRECTORY = bin/
 
-SOURCES := $(wildcard $(SOURCE_DIRECTORY)*.c)
+SOURCES := $(wildcard $(SOURCE_DIRECTORY)*.c) $(wildcard $(SOURCE_DIRECTORY)network/*.c)
 OBJECTS := $(patsubst %.c,%.o,$(SOURCES))
 
 AVRDUDE = avrdude $(PROGRAMMER) -P $(PROGRAMMER_PORT) -p $(PROGRAMMED_DEVICE)

@@ -30,7 +30,7 @@ void usart_init(uint32_t clock, uint32_t baud, uint8_t flags) {
 		// Enable receiving with receive interrupts enabled
 		UCSR0B |= (1 << RXEN0);
 	}
-	UCSR0A = 0;
+	UCSR0A = (1 << U2X0);
 	UBRR0H = (unsigned char) BAUD_HIGH;
 	UBRR0L = (unsigned char) BAUD_LOW;
 
