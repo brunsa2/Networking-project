@@ -11,8 +11,7 @@
 #define USART
 
 #include <avr/io.h>
-
-#include <inttypes.h>
+#include <stdint.h>
 
 /**
  * Enable transmitting
@@ -41,7 +40,7 @@ int usart_putc(char data);
 
 /**
  * Send string over USART
- * @param string
+ * @param string String to send
  */
 void usart_puts(char *string);
 
@@ -56,5 +55,15 @@ int usart_getc(void);
  * @return Number of available characters from the USART
  */
 int usart_hasc(void);
+
+/**
+ * Sent formatted string over USART
+ * @param string Formatted string to send
+ * @param ... Items to senf
+ */
+void usart_putsf(const char *string, ...);
+
+void usart_putd(uint8_t number, uint8_t radix);
+void usart_putl(uint16_t number, uint8_t radix);
 
 #endif

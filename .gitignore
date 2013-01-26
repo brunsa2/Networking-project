@@ -1,3 +1,7 @@
+Project.xcodeproj/*.*
+Project.xcodeproj
 Project.xcodeproj/*
 .DS_Store
 bin/*
+src/*.o
+src/network/*.o

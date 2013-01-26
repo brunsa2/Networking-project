@@ -1,7 +1,7 @@
 #ifndef NETWORK
 #define NETWORK
 
-#define F_BAUD 4800
+#define F_BAUD 4800L
 
 #define TX_DDR DDRA
 #define TX_PORT PORTA
@@ -12,13 +12,16 @@
 #define RX_PIN PINA
 #define RX_PIN_NUMBER 1
 
-#define LINK_LIGHT_DDR DDRA
-#define LINK_LIGHT_PORT PORTA
-#define LINK_LIGHT_PIN_NUMBER 2
+#define LINK_LIGHT_DDR DDRC
+#define LINK_LIGHT_PORT PORTC
+#define LINK_LIGHT_PIN_NUMBER 0
 
-#define COLLISION_LIGHT_DDR DDRA
-#define COLLISION_LIGHT_PORT PORTA
-#define COLLISION_LIGHT_PIN_NUMBER 3
+#define COLLISION_LIGHT_DDR DDRC
+#define COLLISION_LIGHT_PORT PORTC
+#define COLLISION_LIGHT_PIN_NUMBER 1
+
+// TODO: Make lights active low
+// TODO: Use a falling interrupt on receive line for starting/stopping timer
 
 void network_init(void);
 

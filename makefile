@@ -17,7 +17,7 @@ disasm: $(BUILD_DIRECTORY)main.lss
 %.lss: %.elf
 	avr-objdump -d -S $< > $@
 
-$(SOURCE_DIRECTORY)%.o: $(SOURCE_DIRECTORY)%.c
+$(SOURCE_DIRECTORY)%.o: $(SOURCE_DIRECTORY)%.c 
 	$(COMPILE) -c $< -o $@
 
 $(BUILD_DIRECTORY)main.elf: $(OBJECTS)
@@ -29,4 +29,6 @@ $(BUILD_DIRECTORY)main.hex: $(BUILD_DIRECTORY)main.elf
 
 flash: $(BUILD_DIRECTORY)main.hex
 	$(AVRDUDE) -U flash:w:$(BUILD_DIRECTORY)main.hex:i
+
+fuse:
 	$(AVRDUDE) $(FUSES)

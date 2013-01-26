@@ -83,3 +83,92 @@ int usart_hasc(void) {
 	}
 	return 0;
 }
+
+/**
+ * @author http://www.menie.org/georges/embedded/printf.html
+ */
+static void usart_putsf_(int *varg) {
+    register char *format_string = (char *)(*varg++);
+    for (; *format_string != 0; ++format_string) {
+        if (*format_string == '%') {
+            format_string++;
+            switch (*format_string) {
+                case '%':
+                    usart_putc('%');
+                    break;
+                    
+                case 'c':
+                    usart_putc(*varg++);
+                    break;
+                    
+                case 's':
+                    usart_puts(*((char **)varg++));
+                    break;
+                    
+                case 'd':
+                    usart_putd(*varg++, 10);
+                    break;
+                    
+                case 'l':
+                    usart_putl(*varg++, 10);
+                    break;
+                    
+                case 'x':
+                    usart_putd(*varg++, 16);
+                    
+                default:
+                    format_string++;
+            }
+        } else {
+            usart_putc(*format_string);
+        }
+    }
+}
+
+void usart_putd(uint8_t number, uint8_t radix) {
+    char buffer[12];
+    register uint8_t number_left = number, digit;
+    register char *current_position = buffer + 12 - 1;
+    *current_position = '\0';
+    while (number_left) {
+        digit = number_left % radix;
+        if (digit >= 10) {
+            digit += 'a' - '0' - 10;
+        }
+        *--current_position = digit + '0';
+        number_left /= radix;
+    }
+    
+    usart_puts(current_position);
+}
+
+void usart_putl(uint16_t number, uint8_t radix) {
+    char buffer[12];
+    register uint16_t number_left = number, digit;
+    register char *current_position = buffer + 12 - 1;
+    *current_position = '\0';
+    if (number_left == 0) {
+        *--current_position = '0';
+    } else {
+        while (number_left) {
+            digit = number_left % radix;
+            if (digit >= 10) {
+                digit += 'a' - '0' - 10;
+            }
+            *--current_position = digit + '0';
+            number_left /= radix;
+        }
+    }
+    
+    usart_puts(current_position);
+}
+
+/**
+ * Sent formatted string over USART
+ * @param string Formatted string to send
+ * @param ... Items to senf
+*/
+void usart_putsf(const char *string, ...) {
+    register int *varg = (int *) (&string);
+    usart_putsf_(varg);
+}

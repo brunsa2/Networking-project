@@ -14,16 +14,13 @@ static uint8_t buffer_pointer = 0;
 
 
 int main() {
-    DDRA = (1 << PA7) | (1 << PA6) | (1 << PA2) | (1 << PA3);
-    
-    DDRC = 0xff;
-    
     usart_init(16000000L, 1000000L, USART_TRANSMIT | USART_RECEIVE);
     
     network_init();
     
     
-    usart_puts("Enter string and press enter to send\r\n");
+    usart_putsf("Enter string and press enter to send\r\n");
+    
     while (1) {
         if (usart_hasc()) {
             char usart_char = usart_getc();
@@ -43,15 +40,8 @@ int main() {
     return 0;
 }
 
-ISR(TIMER0_COMPA_vect) {
-    PORTA |= 0x80;
-    transmit_current_bit();
-    
-    
-    
-    medium_monitor();
-    transmit_update();
+/*ISR(TIMER0_COMPA_vect) {
+   
     
         
-    PORTA &= ~(0x80);
-}
+}*/

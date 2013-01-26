@@ -9,7 +9,7 @@
 void network_init(void) {
 #ifndef NO_TIMER
 #ifdef __AVR_ATmega1284P__
-    // 19230.8 Hz to sample/send each bit eight times (four high, four low)
+    // Sample each bit Manchester bit four times, whole bit eight times
     OCR0A = (F_CPU >> 3) / (F_BAUD << 2);
     // CTC mode with CLK/8
     TCCR0A = (1 << WGM01);
@@ -32,12 +32,9 @@ void network_init(void) {
 }
 
 #ifndef NO_TIMER
-/*ISR(TIMER0_COMPA_vect) {
+ISR(TIMER0_COMPA_vect) {
     transmit_current_bit();
-    
-    
-    
     medium_monitor();
     transmit_update();
-}*/
+}
 #endif

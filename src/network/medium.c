@@ -18,7 +18,7 @@ static volatile uint8_t state_transition_table[2][36] = {
         10, 11, 12, 13, 14, 35,
         16, 17, 18, 19, 20, 21, 22, 23, 24, 35,
         15, 15, 15, 15, 15, 15, 15, 15, 15, 8,
-        31
+        35
     },
     {
         1, 2, 3, 4, 5, 6, 7, 8,
@@ -33,8 +33,7 @@ static volatile uint8_t state_transition_table[2][36] = {
 void medium_monitor(void) {
     old_state = state;
     state = state_transition_table[RX_BIT][state];
-    PORTC = state;
-
+    
     switch (state) {
         case 8:
             if (old_state == 34) {
@@ -56,20 +55,16 @@ void medium_monitor(void) {
         case 15:
             if (old_state >= 27 && old_state <= 30) {
                 receive_add(1);
-                //('X');
             } else if (old_state >= 31 && old_state <= 33) {
                 receive_add(1);
                 receive_add(1);
-                //usart_putc('Y');
             }
         case 25:
             if ((old_state >= 11 && old_state <= 13) || (old_state >= 17 && old_state <= 19)) {
                 receive_add(0);
-                //usart_putc('x');
             } else if (old_state >= 21 && old_state <= 23) {
                 receive_add(0);
                 receive_add(0);
-                //usart_putc('y');
             }
             break;
         case 35:
@@ -80,6 +75,7 @@ void medium_monitor(void) {
     }
 }
 
+// TODO: Instead of function call overhead, init includes handling over pointer to other modules
 uint8_t medium_is_idle(void) {
     return bus_state == BUS_IDLE;
 }

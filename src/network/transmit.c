@@ -1,6 +1,7 @@
 #include <avr/io.h>
 #include "medium.h"
 #include "network.h"
+#include "../usart.h"
 
 #include "transmit.h"
 
@@ -22,7 +23,7 @@ volatile uint8_t manchester_table[2][8] = {
 volatile uint8_t transmit_clock = 63;
 
 volatile uint8_t *buffer_start, *buffer_end;
-volatile uint8_t buffer_length;
+volatile uint8_t buffer_length, buffer_length_left;
 
 volatile uint8_t ticks = 0;
 
@@ -44,23 +45,34 @@ uint8_t get_next_bit(void) {
     return manchester_table[masked_bit][transmit_clock & 0x07];
 }
 
+
+// TODO: Convert to table method, check inside for needed flags
 void transmit_update(void) {
+    ticks++;
+    
     switch (transmitter_state) {
+            // None
         case TRANSMITTING_IDLE:
             current_bit = 1;
+            current_byte = 0xff;
             transmit_failures = 0;
             break;
             
         case WAITING:
+            // Is idle?
             current_bit = 1;
+            current_byte = 0xff;
             if (medium_is_idle()) {
                 buffer_end = buffer_start;
+                buffer_length = buffer_length_left;
                 transmit_clock = 0;
                 transmitter_state = TRANSMITTING;
             }
             break;
             
         case TRANSMITTING:
+            // Transmit clock and buffer length both 0
+            // Collided
             current_bit = get_next_bit();
             if (0 == transmit_clock) {
                 if (buffer_length != 0) {
@@ -76,22 +88,27 @@ void transmit_update(void) {
                 transmit_clock--;
             }
             if (medium_is_collided()) {
-                if (!is_seeded) {
-                    random_number = ticks;
-                } else {
-                    random_number = (random_number * 109 + 89) % 256;
-                }
+                current_bit = 1;
+                current_byte = 0xff;
                 transmit_failures++;
                 transmitter_state = BUS_COLLISION;
             }
             break;
             
         case BUS_COLLISION:
+            // Idle and less than 10 failures
             current_bit = 1;
             if (medium_is_idle()) {
                 if (transmit_failures < 10) {
+                    if (!is_seeded) {
+                        random_number = ticks;
+                        is_seeded = 1;
+                    } else {
+                        random_number = (random_number * 109 + 89) % 256;
+                    }
                     transmitter_state = COLLISION_WAIT;
-                    collision_wait_ticks = 100;
+                    collision_wait_ticks = random_number * 96;
+                    current_bit = 1;
                 } else {
                     buffer_end = buffer_start;
                     transmitter_state = TRANSMITTING_IDLE;
@@ -100,6 +117,9 @@ void transmit_update(void) {
             break;
             
         case COLLISION_WAIT:
+            // Zero collision wait ticks
+            current_bit = 1;
+            current_byte = 0xff;
             collision_wait_ticks--;
             if (0 == collision_wait_ticks) {
                 transmitter_state = WAITING;
@@ -116,5 +136,6 @@ void transmit_packet(uint8_t *data, uint8_t length) {
     buffer_start = data;
     buffer_end = buffer_start;
     buffer_length = length;
+    buffer_length_left = buffer_length;
     transmitter_state = WAITING;
 }
