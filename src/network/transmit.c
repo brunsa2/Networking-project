@@ -68,7 +68,7 @@ void transmit_update(void) {
             // Is idle?
             current_bit = 1;
             current_byte = 0xff;
-            if (*bus_state == BUS_IDLE) {
+            if (/**bus_state == BUS_IDLE*/ medium_is_idle()) {
                 buffer_end = buffer_start;
                 buffer_length = buffer_length_left;
                 transmit_clock = 0;
@@ -92,7 +92,7 @@ void transmit_update(void) {
             } else {
                 transmit_clock--;
             }
-            if (*bus_state == COLLISION) {
+            if (/**bus_state == COLLISION*/medium_is_collided()) {
                 current_bit = 1;
                 current_byte = 0xff;
                 transmit_failures++;
@@ -103,9 +103,9 @@ void transmit_update(void) {
         case BUS_COLLISION:
             // Idle and less than 10 failures
             current_bit = 1;
-            if (*bus_state == BUS_IDLE) {
+            if (/**bus_state == BUS_IDLE*/ medium_is_idle()) {
                 if (transmit_failures < 10) {
-                    if (!is_seeded) {
+                    if (!is_seeded) { // TODO: Seed at each transmit, start with 89, drop costly if statement
                         random_number = ticks;
                         is_seeded = 1;
                     } else {

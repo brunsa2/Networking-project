@@ -52,6 +52,7 @@ void medium_monitor(void) {
             COLLISION_LIGHT_PORT &= ~(1 << COLLISION_LIGHT_PIN_NUMBER);
             break;
         case 9:
+            bus_state = BUSY;
             LINK_LIGHT_PORT |= (1 << LINK_LIGHT_PIN_NUMBER);
             COLLISION_LIGHT_PORT |= (1 << COLLISION_LIGHT_PIN_NUMBER);
             break;
@@ -80,4 +81,11 @@ void medium_monitor(void) {
 
 t_bus_state *medium_get_bus_state_pointer(void) {
     return &bus_state;
+}
+
+uint8_t medium_is_idle(void) {
+    return bus_state == BUS_IDLE;
+}
+uint8_t medium_is_collided(void) {
+    return bus_state == COLLISION;
 }

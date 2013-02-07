@@ -110,7 +110,7 @@ void network_receive_byte(uint8_t data) {
     switch (receive_packet_state) {
         case START:
             if (data == 0xfa) {
-                usart_putsf("Receive packet start\r\n");
+                usart_putsf("Frame start\r\n");
                 receive_packet_state = VERSION;
             }
             break;
@@ -157,10 +157,8 @@ void network_receive_byte(uint8_t data) {
             usart_putsf("CRC %d\r\n", data);
             
             if (receive_fifo[fifo_tail].data) {
-                usart_putsf("Free %d\r\n", fifo_tail);
                 free(receive_fifo[fifo_tail].data);
             }
-            usart_putsf("Malloc %d\r\n", fifo_tail);
             receive_fifo[fifo_tail].data = malloc(receive_fifo[fifo_tail].length + 1);
             
             break;
@@ -205,7 +203,6 @@ void network_receive_byte(uint8_t data) {
             fifo_tail = (fifo_tail + 1) & ((1 << FIFO_SIZE) - 1);
             fifo_size++;
             
-            usart_putsf("FIFO size %d\r\nTail %d\r\nHead %d\r\n", fifo_size, fifo_tail, fifo_head);
             break;
     }
 }
