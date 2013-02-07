@@ -13,6 +13,8 @@
 #include <avr/io.h>
 #include <stdint.h>
 
+#define USART_BAUD 115200L
+
 /**
  * Enable transmitting
  */
@@ -26,11 +28,10 @@
 /**
  * Initialize USART with specified baud rate and options
  * @param baud Baud rate
- * @param clock_rate MCU clock rate (kHz) to calculate the baud rate value for
  * @param flags Flags for options for serial port
  * @return Nothing
  */
-void usart_init(uint32_t clock, uint32_t baud, uint8_t flags);
+void usart_init(uint32_t baud, uint8_t flags);
 
 /**
  * Send one byte over USART
@@ -57,13 +58,10 @@ int usart_getc(void);
 int usart_hasc(void);
 
 /**
- * Sent formatted string over USART
+ * Send formatted string over USART
  * @param string Formatted string to send
- * @param ... Items to senf
+ * @param ... Items to send
  */
 void usart_putsf(const char *string, ...);
-
-void usart_putd(uint8_t number, uint8_t radix);
-void usart_putl(uint16_t number, uint8_t radix);
 
 #endif

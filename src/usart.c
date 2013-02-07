@@ -9,18 +9,20 @@
 
 #include "usart.h"
 
+static void usart_putsf_(int *varg);
+static void usart_putd(uint8_t number, uint8_t radix);
+static void usart_putl(uint16_t number, uint8_t radix);
+
 volatile static uint8_t usart_is_initialized = 0;
 
-#define BAUD_HIGH 0
-#define BAUD_LOW 16
+#define BAUD_RATE(baud) (F_CPU/(baud << 3) - 1)
 
  /**
   * Initialize USART with specified baud rate and options
-  * @param clock MCU clock rate (Hz) to calculate the baud rate value for
   * @param baud Baud rate
   * @param flags Flags for options for serial port
   */
-void usart_init(uint32_t clock, uint32_t baud, uint8_t flags) {
+void usart_init(uint32_t baud, uint8_t flags) {
 	UCSR0B = 0;
 	if (flags & USART_TRANSMIT) {
 		// Enable transmitting
@@ -31,8 +33,13 @@ void usart_init(uint32_t clock, uint32_t baud, uint8_t flags) {
 		UCSR0B |= (1 << RXEN0);
 	}
 	UCSR0A = (1 << U2X0);
-	UBRR0H = (unsigned char) BAUD_HIGH;
-	UBRR0L = (unsigned char) BAUD_LOW;
+#ifdef USART_BAUD
+    UBRR0H = BAUD_RATE(USART_BAUD) >> 8;
+    UBRR0L = BAUD_RATE(USART_BAUD) & 0xff;
+#else
+    UBRR0H = BAUD_RATE(baud) >> 8;
+    UBRR0L = BAUD_RATE(baud) & 0xff;
+#endif
 
 	usart_is_initialized = 1;
 }
@@ -85,6 +92,18 @@ int usart_hasc(void) {
 }
 
 /**
+ * Send formatted string over USART
+ * @param string Formatted string to send
+ * @param ... Items to send
+ */
+void usart_putsf(const char *string, ...) {
+    register int *varg = (int *) (&string);
+    usart_putsf_(varg);
+}
+
+/**
+ * Send formatted string over USART
+ * @param varg Pointer to first argument
  * @author http://www.menie.org/georges/embedded/printf.html
  */
 static void usart_putsf_(int *varg) {
@@ -125,26 +144,14 @@ static void usart_putsf_(int *varg) {
     }
 }
 
-void usart_putd(uint8_t number, uint8_t radix) {
+/**
+ * Write unsigned byte to USART
+ * @param number Number to send
+ * @radix Radix to use
+ */
+static void usart_putd(uint8_t number, uint8_t radix) {
     char buffer[12];
     register uint8_t number_left = number, digit;
-    register char *current_position = buffer + 12 - 1;
-    *current_position = '\0';
-    while (number_left) {
-        digit = number_left % radix;
-        if (digit >= 10) {
-            digit += 'a' - '0' - 10;
-        }
-        *--current_position = digit + '0';
-        number_left /= radix;
-    }
-    
-    usart_puts(current_position);
-}
-
-void usart_putl(uint16_t number, uint8_t radix) {
-    char buffer[12];
-    register uint16_t number_left = number, digit;
     register char *current_position = buffer + 12 - 1;
     *current_position = '\0';
     if (number_left == 0) {
@@ -164,11 +171,27 @@ void usart_putl(uint16_t number, uint8_t radix) {
 }
 
 /**
- * Sent formatted string over USART
- * @param string Formatted string to send
- * @param ... Items to senf
-*/
-void usart_putsf(const char *string, ...) {
-    register int *varg = (int *) (&string);
-    usart_putsf_(varg);
+ * Write unsigned word to USART
+ * @param number Number to send
+ * @radix Radix to use
+ */
+static void usart_putl(uint16_t number, uint8_t radix) {
+    char buffer[12];
+    register uint16_t number_left = number, digit;
+    register char *current_position = buffer + 12 - 1;
+    *current_position = '\0';
+    if (number_left == 0) {
+        *--current_position = '0';
+    } else {
+        while (number_left) {
+            digit = number_left % radix;
+            if (digit >= 10) {
+                digit += 'a' - '0' - 10;
+            }
+            *--current_position = digit + '0';
+            number_left /= radix;
+        }
+    }
+    
+    usart_puts(current_position);
 }

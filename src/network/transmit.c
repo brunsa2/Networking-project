@@ -5,6 +5,8 @@
 
 #include "transmit.h"
 
+volatile t_bus_state *bus_state;
+
 volatile uint8_t current_byte = 0xff, current_bit = 1;
 volatile uint8_t transmit_failures, is_seeded = 0, random_number;
 volatile uint16_t collision_wait_ticks;
@@ -29,6 +31,10 @@ volatile uint8_t ticks = 0;
 
 typedef enum { TRANSMITTING_IDLE, WAITING, TRANSMITTING, BUS_COLLISION, COLLISION_WAIT } t_transmitter_state;
 t_transmitter_state transmitter_state = TRANSMITTING_IDLE;
+
+void transmit_set_bus_state_pointer(t_bus_state *state) {
+    bus_state = state;
+}
 
 void transmit_current_bit(void) {
     uint8_t current_transmit_port = TX_PORT;
@@ -62,7 +68,7 @@ void transmit_update(void) {
             // Is idle?
             current_bit = 1;
             current_byte = 0xff;
-            if (medium_is_idle()) {
+            if (*bus_state == BUS_IDLE) {
                 buffer_end = buffer_start;
                 buffer_length = buffer_length_left;
                 transmit_clock = 0;
@@ -76,8 +82,7 @@ void transmit_update(void) {
             current_bit = get_next_bit();
             if (0 == transmit_clock) {
                 if (buffer_length != 0) {
-                    current_byte = *buffer_end;
-                    buffer_end++;
+                    current_byte = *buffer_end++;
                     buffer_length--;
                 } else {
                     buffer_end = buffer_start;
@@ -87,7 +92,7 @@ void transmit_update(void) {
             } else {
                 transmit_clock--;
             }
-            if (medium_is_collided()) {
+            if (*bus_state == COLLISION) {
                 current_bit = 1;
                 current_byte = 0xff;
                 transmit_failures++;
@@ -98,7 +103,7 @@ void transmit_update(void) {
         case BUS_COLLISION:
             // Idle and less than 10 failures
             current_bit = 1;
-            if (medium_is_idle()) {
+            if (*bus_state == BUS_IDLE) {
                 if (transmit_failures < 10) {
                     if (!is_seeded) {
                         random_number = ticks;

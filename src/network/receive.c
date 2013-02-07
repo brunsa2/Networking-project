@@ -36,6 +36,6 @@ void receive_bit(uint8_t bit) {
     
     if (0 == number_of_byte_bits) {
         number_of_byte_bits = 8;
-        usart_putc(0b01111111 & current_byte);
+        network_receive_byte(current_byte);
     }
 }

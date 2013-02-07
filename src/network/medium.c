@@ -7,7 +7,6 @@
 
 #define RX_BIT ((RX_PIN & (1 << RX_PIN_NUMBER)) >> 1)
 
-typedef enum { BUS_IDLE, BUSY, COLLISION } t_bus_state;
 t_bus_state bus_state = COLLISION;
 
 static volatile uint8_t state = 0, old_state;
@@ -30,6 +29,8 @@ static volatile uint8_t state_transition_table[2][36] = {
     }
 };
 
+// TODO: Choose to emit one or two 1s from going to idle based on number of bits/bytes received
+
 void medium_monitor(void) {
     old_state = state;
     state = state_transition_table[RX_BIT][state];
@@ -40,9 +41,11 @@ void medium_monitor(void) {
                 receive_add(1);
                 receive_add(1);
                 receive_reset();
+                network_receive_reset();
             }
             if (old_state == 35) {
                 receive_reset();
+                network_receive_reset();
             }
             bus_state = BUS_IDLE;
             LINK_LIGHT_PORT |= (1 << LINK_LIGHT_PIN_NUMBER);
@@ -75,11 +78,6 @@ void medium_monitor(void) {
     }
 }
 
-// TODO: Instead of function call overhead, init includes handling over pointer to other modules
-uint8_t medium_is_idle(void) {
-    return bus_state == BUS_IDLE;
-}
-
-uint8_t medium_is_collided(void) {
-    return bus_state == COLLISION;
+t_bus_state *medium_get_bus_state_pointer(void) {
+    return &bus_state;
 }
