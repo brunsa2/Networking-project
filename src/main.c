@@ -22,22 +22,44 @@ int main() {
     network_init();
     network_add_address(133);
     
-    while (1) {
+    t_address destination;
+    t_receive_packet packet;
+    
+    uint8_t position = 0;
+    t_address destination_address;
+    
+    while (1) { 
         if (usart_hasc()) {
             char usart_char = usart_getc();
             if (usart_char != '\r' && usart_char != '\n') {
-                if (!network_is_transmitting() && buffer_pointer <= BUFFER_SIZE) {
+                if (position == 0) {
+                    usart_putc(usart_char);
+                    destination_address = 100 * (usart_char - '0');
+                    position = 1;
+                } else if (position == 1) {
+                    usart_putc(usart_char);
+                    destination_address += 10 * (usart_char - '0');
+                    position = 2;
+                } else if (position == 2) {
+                    usart_putc(usart_char);
+                    destination_address += usart_char - '0';
+                    position = 3;
+                } else if (position == 3) {
+                    usart_putc(usart_char);
+                    position = 4;
+                } else if (!network_is_transmitting() && buffer_pointer <= BUFFER_SIZE) {
                     usart_putc(usart_char);
                     data_buffer[buffer_pointer++] = 0x80 | usart_char;
                 }
             }
             if (usart_char == '\n') {
+                position = 0;
                 usart_putc(usart_char);
                 
                 t_packet packet;
                 packet.crc = CRC_NONE;
                 packet.source = 133;
-                packet.destination = 93;
+                packet.destination = destination_address;
                 packet.length = buffer_pointer;
                 packet.data = data_buffer;
                 
@@ -46,6 +68,14 @@ int main() {
                 buffer_pointer = 0;
             }
         }
+        asm volatile("cli");
+        if (network_has_received_packet(&destination) && (destination == 133 || destination == 0 || destination == 255)) {
+            network_get_received_packet(destination, &packet);
+            usart_putsf("\r\n(From %d): %s\r\n", packet.source, packet.data);
+        } else {
+            network_discard_received_packet();
+        }
+        asm volatile("sei");
     }
     return 0;
 }

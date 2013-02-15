@@ -14,6 +14,11 @@ void receive_reset(void) {
 }
 
 void receive_add(uint8_t bit) {
+    /*if (bit) {
+        usart_putsf("1");
+    } else {
+        usart_putsf("0");
+    }*/
     current_manchester_bits = current_manchester_bits << 1 | bit;
     number_of_manchester_bits--;
     
@@ -31,11 +36,18 @@ void receive_add(uint8_t bit) {
 }
 
 void receive_bit(uint8_t bit) {
+    if (bit) {
+        usart_putc('#');
+    } else {
+        usart_putc('_');
+    }
     current_byte = current_byte << 1 | bit;
     number_of_byte_bits--;
     
     if (0 == number_of_byte_bits) {
         number_of_byte_bits = 8;
+        usart_putc('\r');
+        usart_putc('\n');
         network_receive_byte(current_byte);
     }
 }

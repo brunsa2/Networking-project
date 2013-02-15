@@ -60,7 +60,7 @@ typedef enum { START, VERSION, SOURCE, DESTINATION, LENGTH, CRC_MODE, HEADER_CRC
 typedef struct {
     t_address source, destination;
     uint8_t length, is_valid;
-    uint8_t data[DATA_SIZE];
+    uint8_t data[DATA_SIZE + 1];
 } t_receive_packet;
 
 typedef struct {
@@ -76,5 +76,8 @@ int8_t network_transmit_packet(t_packet *packet);
 int8_t network_add_address(t_address address);
 void network_receive_byte(uint8_t byte);
 void network_receive_reset(void);
+uint8_t network_has_received_packet(t_address *destination);
+uint8_t network_get_received_packet(t_address destination, t_receive_packet *packet);
+void network_discard_received_packet(void);
 
 #endif

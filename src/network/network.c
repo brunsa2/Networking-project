@@ -110,32 +110,34 @@ void network_receive_byte(uint8_t data) {
     switch (receive_packet_state) {
         case START:
             if (data == 0xfa) {
-                usart_putsf("Frame start\r\n");
+                //usart_putsf("Frame start\r\n");
                 receive_packet_state = VERSION;
             }
             break;
             
         case VERSION:
-            if (data == VERSION_CODE) {
-                usart_putsf("Version 1\r\n");
-                receive_packet_state = SOURCE;
-            } else {
-                network_receive_reset();
-            }
+            //if (data == VERSION_CODE) {
+                //usart_putsf("Version 1\r\n");
+            //    receive_packet_state = SOURCE;
+            //} else {
+            //    usart_putsf("Bad version %d\r\n", data);
+            //    network_receive_reset();
+            //}
+            receive_packet_state = SOURCE;
             break;
         
         case SOURCE:
-            receive_fifo[fifo_tail].destination = data;
+            receive_fifo[fifo_tail].source = data;
             receive_packet_state = DESTINATION;
             
-            usart_putsf("From %d\r\n", data);
+            //usart_putsf("From %d\r\n", data);
             break;
             
         case DESTINATION:
-            receive_fifo[fifo_tail].source = data;
+            receive_fifo[fifo_tail].destination = data;
             receive_packet_state = LENGTH;
             
-            usart_putsf("To %d\r\n", data);
+            //usart_putsf("To %d\r\n", data);
             break;
             
         case LENGTH:
@@ -143,18 +145,18 @@ void network_receive_byte(uint8_t data) {
             receive_length_left = data;
             receive_packet_state = CRC_MODE;
             
-            usart_putsf("%d bytes\r\n", data);
+            //usart_putsf("%d bytes\r\n", data);
             break;
             
         case CRC_MODE:
             receive_crc_mode = data;
             receive_packet_state = HEADER_CRC;
-            usart_putsf("CRC mode %d\r\n", data);
+            //usart_putsf("CRC mode %d\r\n", data);
             break;
             
         case HEADER_CRC:
             receive_packet_state = DATA;
-            usart_putsf("CRC %d\r\n", data);
+            //usart_putsf("CRC %d\r\n", data);
             
             if (receive_fifo[fifo_tail].data) {
                 free(receive_fifo[fifo_tail].data);
@@ -185,7 +187,7 @@ void network_receive_byte(uint8_t data) {
             
             receive_fifo[fifo_tail].data[receive_buffer_pointer] = '\0';
             
-            usart_putsf("Data: %s\r\n", receive_fifo[fifo_tail].data);
+            //usart_putsf("Data: %s\r\n", receive_fifo[fifo_tail].data);
             
             
             receive_packet_state = DATA_CRC_LOW;
@@ -194,7 +196,7 @@ void network_receive_byte(uint8_t data) {
         case DATA_CRC_LOW:
             receive_data_crc = receive_data_crc << 8 | data;
             receive_packet_state = START;
-            usart_putsf("CRC %l\r\n", receive_data_crc);
+            //usart_putsf("CRC %l\r\n", receive_data_crc);
             
             if (fifo_size == (1 << FIFO_SIZE)) {
                 fifo_head = (fifo_head + 1) & ((1 << FIFO_SIZE) - 1);
@@ -211,4 +213,35 @@ void network_receive_reset(void) {
     receive_length_left = 0;
     receive_buffer_pointer = 0;
     receive_packet_state = START;
+}
+
+uint8_t network_has_received_packet(t_address *destination) {
+    *destination = receive_fifo[fifo_head].destination;
+    return fifo_size != 0;
+}
+
+uint8_t network_get_received_packet(t_address destination, t_receive_packet *packet) {
+    uint8_t packets_sent = 0;
+    if (fifo_size > 0) {
+        if (receive_fifo[fifo_head].destination == destination) {
+            packet->source = receive_fifo[fifo_head].source;
+            packet->destination = receive_fifo[fifo_head].destination;
+            packet->length = receive_fifo[fifo_head].length;
+            uint8_t *src = receive_fifo[fifo_head].data;
+            uint8_t *dest = packet->data;
+            memcpy(dest, src, receive_fifo[fifo_head].length);
+            packet->data[receive_fifo[fifo_head].length] = '\0';
+            packets_sent = 1;
+        }
+        fifo_head = (fifo_head + 1) & ((1 << FIFO_SIZE) - 1);
+        fifo_size--;
+    }
+    return packets_sent;
+}
+
+void network_discard_received_packet(void) {
+    if (fifo_size > 0) {
+        fifo_head = (fifo_head + 1) & ((1 << FIFO_SIZE) - 1);
+        fifo_size--;
+    }
 }
